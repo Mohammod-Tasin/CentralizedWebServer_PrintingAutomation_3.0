@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PrintHub - Smart Cloud Printing</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="main-container">
+    <div class="card">
+        <div class="header">
+            <h1>📠 PrintHub</h1>
+            <p>Secure Document Printing Portal</p>
+        </div>
+
+        <div class="content">
+            <form id="uploadForm">
+
+                <div class="form-group">
+                    <label for="printerSelect" class="section-label">📍 Select Printer Location</label>
+                    <select id="printerSelect" class="dropdown" required>
+                        <option value="" disabled selected>-- Choose Location --</option>
+                        <option value="hamid_hall">Hamid Hall (Ground Floor)</option>
+                        <option value="zia_hall">Zia Hall (Common Room)</option>
+                    </select>
+                </div>
+
+                <div class="upload-area">
+                    <input type="file" id="fileInput" multiple required accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" class="file-input-hidden">
+                    <label for="fileInput" class="upload-label">
+                        <span class="icon">📄</span>
+                        <span>Click to upload files</span>
+                        <span class="sub-text">(PDF, DOCX, Images supported)</span>
+                    </label>
+                </div>
+
+                <div id="filesList" class="files-list"></div>
+
+                <div class="cost-summary">
+                    <span>Total Estimated Cost:</span>
+                    <span class="cost-amount"><span id="totalCost">0</span> Taka</span>
+                </div>
+
+                <div class="actions">
+                    <button type="button" id="clearBtn" class="btn btn-secondary">Clear All</button>
+                    <button type="submit" id="submitBtn" class="btn btn-primary">Proceed to Pay 🚀</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="paymentSection" class="payment-overlay">
+        <div class="payment-card">
+            <h3>💳 Payment Gateway</h3>
+            <div class="receipt">
+                <div class="row"><span>Printer:</span> <span id="paymentPrinter">-</span></div>
+                <div class="row"><span>Total Files:</span> <span id="paymentFiles">0</span></div>
+                <div class="row"><span>Total Pages:</span> <span id="paymentPages">0</span></div>
+                <div class="row total"><span>Amount to Pay:</span> <span id="paymentAmount">0 Tk</span></div>
+            </div>
+            <div class="payment-methods">
+                <button class="pay-btn bkash" id="bkashBtn">bKash</button>
+                <button class="pay-btn nagad" id="nagadBtn">Nagad</button>
+                <button class="pay-btn stripe" id="stripeBtn">Stripe</button>
+            </div>
+            <button class="btn-text" id="cancelPayment">Cancel</button>
+        </div>
+    </div>
+
+    <div id="loading" class="loading-overlay">
+        <div class="spinner"></div>
+        <p>Processing your documents...</p>
+    </div>
+
+    <div id="message" class="toast"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
