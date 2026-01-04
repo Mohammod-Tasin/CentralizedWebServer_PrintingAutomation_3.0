@@ -21,6 +21,8 @@ const studentIdInput = document.getElementById('studentId');
 const trxIdInput = document.getElementById('trxId');
 const senderNumInput = document.getElementById('senderNum');
 const printerLocation = document.getElementById('printerLocation').value;
+// 🔥 NEW INPUT
+const collectLaterInput = document.getElementById('collectLater');
 
 let selectedFiles = [];
 let currentTotalCost = 0;
@@ -129,7 +131,7 @@ function updateUI() {
         grandTotalCost += fileCost;
     });
 
-    // 🔥 CEIL COST
+    // CEIL COST
     currentTotalCost = Math.ceil(grandTotalCost);
     document.getElementById('totalCost').textContent = currentTotalCost;
     document.getElementById('payAmountDisplay').textContent = currentTotalCost;
@@ -170,7 +172,7 @@ uploadForm.addEventListener('submit', (e) => {
     trxIdInput.value = '';
     senderNumInput.value = '';
 
-    // 🔥 NAGAD HIDE LOGIC
+    // NAGAD HIDE LOGIC
     const nagadWrapper = document.getElementById('nagadWrapper');
     const nagadMsg = document.getElementById('nagadLowAmountMsg');
 
@@ -193,14 +195,11 @@ verifyBtn.onclick = async () => {
     if (!trxId) return showMessage('Please enter Transaction ID!', 'error');
     if (senderNum.length !== 4) return showMessage('Please enter last 4 digits of sender number!', 'error');
 
-    // 🔄 Show Loader inside button
     const originalBtnText = verifyBtn.innerHTML;
     verifyBtn.disabled = true;
     verifyBtn.innerHTML = `<div class="btn-spinner"></div> Verifying...`;
 
     try {
-        // 1. Verify Payment First
-        // Note: Assuming verify-payment endpoint is at same base url but /verify-payment
         const verifyUrl = CENTRAL_SERVER.replace('/upload', '') + '/verify-payment';
 
         const verifyRes = await fetch(verifyUrl, {
@@ -219,17 +218,14 @@ verifyBtn.onclick = async () => {
             verifyBtn.disabled = false;
             verifyBtn.innerHTML = originalBtnText;
 
-            // ❌ UNDERPAYMENT Logic
             if (verifyResult.error_type === 'underpayment') {
                 alert(verifyResult.message);
-                // Optional: location.reload();
             } else {
                 showMessage(verifyResult.message, 'error');
             }
             return;
         }
 
-        // ✅ OVERPAYMENT Warning Logic
         if (verifyResult.warning) {
             alert(verifyResult.message);
         }
@@ -245,6 +241,9 @@ verifyBtn.onclick = async () => {
         formData.append('trxId', trxId);
         formData.append('senderNum', senderNum);
         formData.append('totalCost', currentTotalCost);
+        // 🔥 SEND COLLECT LATER FLAG
+        formData.append('collectLater', collectLaterInput.checked);
+
         selectedFiles.forEach(item => formData.append('files', item.file));
         const settings = selectedFiles.map(item => ({
             fileName: item.file.name,
