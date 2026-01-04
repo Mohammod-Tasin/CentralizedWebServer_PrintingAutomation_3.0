@@ -4,35 +4,46 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PrintHub - Smart Cloud Printing</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <div class="main-container">
     <div class="card">
         <div class="header">
-            <h1>📠 PrintHub</h1>
+            <h1><i class="ph ph-printer"></i> PrintHub</h1>
             <p>Secure Document Printing Portal</p>
         </div>
 
         <div class="content">
             <form id="uploadForm">
 
+                <div class="user-info-section">
+                    <div class="form-group">
+                        <label class="section-label"><i class="ph ph-user"></i> User Name</label>
+                        <input type="text" id="userName" class="ctrl-input full-width" placeholder="Enter your full name" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="section-label"><i class="ph ph-identification-card"></i> Student ID</label>
+                        <input type="text" id="studentId" class="ctrl-input full-width" placeholder="Enter Student ID (e.g., 2003001)" required>
+                    </div>
+                </div>
+
                 <div class="form-group">
-                    <label for="printerSelect" class="section-label">📍 Select Printer Location</label>
-                    <select id="printerSelect" class="dropdown" required>
-                        <option value="" disabled selected>-- Choose Location --</option>
-                        <option value="hamid_hall">Hamid Hall (Ground Floor)</option>
-                        <option value="zia_hall">Zia Hall (Common Room)</option>
-                    </select>
+                    <label class="section-label"><i class="ph ph-map-pin"></i> Printer Location</label>
+                    <div class="fixed-location">
+                        <i class="ph-fill ph-house-line"></i> Hamid Hall (Ground Floor)
+                    </div>
+                    <input type="hidden" id="printerLocation" value="Hamid Hall (Ground Floor)">
                 </div>
 
                 <div class="upload-area">
                     <input type="file" id="fileInput" multiple required accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" class="file-input-hidden">
                     <label for="fileInput" class="upload-label">
-                        <span class="icon">📄</span>
-                        <span>Click to upload files</span>
-                        <span class="sub-text">(PDF, DOCX, Images supported)</span>
+                        <i class="ph ph-cloud-arrow-up icon"></i>
+                        <span class="main-text">Click to upload files</span>
+                        <span class="sub-text">PDF, DOCX, Images (Max 10MB)</span>
                     </label>
                 </div>
 
@@ -44,8 +55,8 @@
                 </div>
 
                 <div class="actions">
-                    <button type="button" id="clearBtn" class="btn btn-secondary">Clear All</button>
-                    <button type="submit" id="submitBtn" class="btn btn-primary">Proceed to Pay 🚀</button>
+                    <button type="button" id="clearBtn" class="btn btn-secondary"><i class="ph ph-trash"></i> Clear</button>
+                    <button type="submit" id="submitBtn" class="btn btn-primary">Proceed to Payment <i class="ph ph-arrow-right"></i></button>
                 </div>
             </form>
         </div>
@@ -53,25 +64,71 @@
 
     <div id="paymentSection" class="payment-overlay">
         <div class="payment-card">
-            <h3>💳 Payment Gateway</h3>
-            <div class="receipt">
-                <div class="row"><span>Printer:</span> <span id="paymentPrinter">-</span></div>
-                <div class="row"><span>Total Files:</span> <span id="paymentFiles">0</span></div>
-                <div class="row"><span>Total Pages:</span> <span id="paymentPages">0</span></div>
-                <div class="row total"><span>Amount to Pay:</span> <span id="paymentAmount">0 Tk</span></div>
+            <div class="modal-header">
+                <h3><i class="ph ph-wallet"></i> Verify Payment</h3>
             </div>
-            <div class="payment-methods">
-                <button class="pay-btn bkash" id="bkashBtn">bKash</button>
-                <button class="pay-btn nagad" id="nagadBtn">Nagad</button>
-                <button class="pay-btn stripe" id="stripeBtn">Stripe</button>
+
+            <div class="payment-body">
+                <p class="instruction-text">Please <strong>Send Money</strong> to one of these numbers:</p>
+
+                <div id="nagadWrapper">
+                    <div class="number-box nagad">
+                        <div class="nb-top">
+                            <span class="provider">Nagad</span>
+                            <span class="number">01771080238</span>
+                            <i class="ph ph-copy copy-icon" onclick="navigator.clipboard.writeText('01771080238'); alert('Nagad Number Copied!')"></i>
+                        </div>
+                        <div class="nb-bottom">
+                            <small>চার্জ এড়াতে নম্বরটি 'Priyo' করে নিন</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="nagadLowAmountMsg" style="display:none; color: #b91c1c; font-size: 0.85rem; margin-bottom: 10px; text-align: center; background: #fef2f2; padding: 10px; border-radius: 8px; border: 1px solid #fca5a5;">
+                    ⚠️ ১০ টাকার কম হলে নগদ এ সেন্ড মানি করা যায় না। অনুগ্রহ করে বিকাশ ব্যবহার করুন।
+                </div>
+
+                <div class="number-box bkash">
+                    <div class="nb-top">
+                        <span class="provider">bKash</span>
+                        <span class="number">01890386751</span>
+                        <i class="ph ph-copy copy-icon" onclick="navigator.clipboard.writeText('01890386751'); alert('bKash Number Copied!')"></i>
+                    </div>
+                    <div class="nb-bottom">
+                        <small>ফ্রি সেন্ড মানি করতে নম্বরটি 'Priyo' করুন</small>
+                    </div>
+                </div>
+
+                <div class="warning-box">
+                    <i class="ph ph-warning-circle"></i>
+                    <div>
+                        <strong>IMPORTANT:</strong> Pay exactly <strong><span id="payAmountDisplay">0</span> Tk</strong>.
+                        <br>Do not pay less or more.
+                    </div>
+                </div>
+
+                <div class="payment-inputs-row">
+                    <div class="input-wrapper flex-grow">
+                        <label>Transaction ID (TrxID)</label>
+                        <input type="text" id="trxId" class="ctrl-input" placeholder="e.g. 9G7HG..." required>
+                    </div>
+                    <div class="input-wrapper fixed-width">
+                        <label>Sender (Last 4)</label>
+                        <input type="number" id="senderNum" class="ctrl-input" placeholder="1234" maxlength="4" required>
+                    </div>
+                </div>
             </div>
-            <button class="btn-text" id="cancelPayment">Cancel</button>
+
+            <div class="modal-footer">
+                <button class="pay-btn verify-btn" id="verifyBtn">Verify & Proceed</button>
+                <button class="btn-text" id="cancelPayment">Cancel</button>
+            </div>
         </div>
     </div>
 
     <div id="loading" class="loading-overlay">
         <div class="spinner"></div>
-        <p>Processing your documents...</p>
+        <p>Sending File to Printer...</p>
     </div>
 
     <div id="message" class="toast"></div>

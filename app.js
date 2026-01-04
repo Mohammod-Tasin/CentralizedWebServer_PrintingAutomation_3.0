@@ -7,15 +7,23 @@ if (window.pdfjsLib) {
 
 const fileInput = document.getElementById('fileInput');
 const filesList = document.getElementById('filesList');
-const printerSelect = document.getElementById('printerSelect');
 const uploadForm = document.getElementById('uploadForm');
 const messageDiv = document.getElementById('message');
 const paymentSection = document.getElementById('paymentSection');
 const loading = document.getElementById('loading');
 const cancelPaymentBtn = document.getElementById('cancelPayment');
 const clearBtn = document.getElementById('clearBtn');
+const verifyBtn = document.getElementById('verifyBtn');
+
+// Inputs
+const userNameInput = document.getElementById('userName');
+const studentIdInput = document.getElementById('studentId');
+const trxIdInput = document.getElementById('trxId');
+const senderNumInput = document.getElementById('senderNum');
+const printerLocation = document.getElementById('printerLocation').value;
 
 let selectedFiles = [];
+let currentTotalCost = 0;
 
 // Handle File Selection
 fileInput.addEventListener('change', (e) => {
@@ -36,7 +44,6 @@ fileInput.addEventListener('change', (e) => {
 function updateUI() {
     filesList.innerHTML = '';
     let grandTotalCost = 0;
-    let totalPagesToPrint = 0;
 
     selectedFiles.forEach((item, index) => {
         const div = document.createElement('div');
@@ -49,7 +56,7 @@ function updateUI() {
         const settingsDiv = document.createElement('div');
         settingsDiv.className = 'settings-row';
 
-        // 1. Pages Input (Auto for PDF, Manual for others)
+        // Pages Input
         let totalPagesInput = '';
         if (item.file.name.toLowerCase().endsWith('.pdf')) {
             totalPagesInput = `<div class="input-group"><label>Pages</label><input type="text" value="${item.pageCount}" disabled class="ctrl-input" style="background:#eee; width:50px;"></div>`;
@@ -66,21 +73,18 @@ function updateUI() {
 
         settingsDiv.innerHTML = `
             ${totalPagesInput}
-            
             <div class="input-group">
                 <label>Range</label>
                 <input type="text" placeholder="1-5" value="${item.range}" 
                        onchange="updateFileSetting(${index}, 'range', this.value)"
                        class="ctrl-input" style="width:70px;">
             </div>
-
             <div class="input-group">
                 <label>Copies</label>
                 <input type="number" min="1" value="${item.copies}" 
                        onchange="updateFileSetting(${index}, 'copies', this.value)"
                        class="ctrl-input" style="width:50px;">
             </div>
-
             <div class="input-group">
                 <label>Color</label>
                 <select onchange="updateFileSetting(${index}, 'color', this.value)" 
@@ -118,21 +122,17 @@ function updateUI() {
             estimatedPages = 1;
         }
 
-        // Price Logic: B&W = 2tk, Color = 3.5tk
         const costPerSheet = item.color === 'bw' ? 2 : 3.5;
         const fileCost = estimatedPages * item.copies * costPerSheet;
         item.calculatedCost = fileCost;
 
         grandTotalCost += fileCost;
-        totalPagesToPrint += (estimatedPages * item.copies);
     });
 
-    document.getElementById('totalCost').textContent = grandTotalCost.toFixed(2);
-
-    // Update Payment Modal Info
-    document.getElementById('paymentAmount').textContent = grandTotalCost.toFixed(2) + " Tk";
-    document.getElementById('paymentPages').textContent = totalPagesToPrint;
-    document.getElementById('paymentFiles').textContent = selectedFiles.length;
+    // 🔥 CEIL COST
+    currentTotalCost = Math.ceil(grandTotalCost);
+    document.getElementById('totalCost').textContent = currentTotalCost;
+    document.getElementById('payAmountDisplay').textContent = currentTotalCost;
 }
 
 window.updateFileSetting = function(index, key, value) {
@@ -159,54 +159,128 @@ cancelPaymentBtn.onclick = () => paymentSection.classList.remove('show');
 
 uploadForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    if (!printerSelect.value) return showMessage('Please select a printer location!', 'error');
-    if (selectedFiles.length === 0) return showMessage('Please upload at least one file!', 'error');
 
-    document.getElementById('paymentPrinter').textContent = printerSelect.options[printerSelect.selectedIndex].text;
+    if (!userNameInput.value.trim() || !studentIdInput.value.trim()) {
+        return showMessage('Please fill in your Name and ID!', 'error');
+    }
+    if (selectedFiles.length === 0) {
+        return showMessage('Please upload at least one file!', 'error');
+    }
+
+    trxIdInput.value = '';
+    senderNumInput.value = '';
+
+    // 🔥 NAGAD HIDE LOGIC
+    const nagadWrapper = document.getElementById('nagadWrapper');
+    const nagadMsg = document.getElementById('nagadLowAmountMsg');
+
+    if (currentTotalCost < 10) {
+        nagadWrapper.style.display = 'none';
+        nagadMsg.style.display = 'block';
+    } else {
+        nagadWrapper.style.display = 'block';
+        nagadMsg.style.display = 'none';
+    }
+
     paymentSection.classList.add('show');
 });
 
-// Process Payment & Upload
-async function processPayment(gateway) {
-    loading.classList.add('show');
-    const selectedLocation = printerSelect.value;
+// 🔥 VERIFY & UPLOAD LOGIC
+verifyBtn.onclick = async () => {
+    const trxId = trxIdInput.value.trim();
+    const senderNum = senderNumInput.value.trim();
+
+    if (!trxId) return showMessage('Please enter Transaction ID!', 'error');
+    if (senderNum.length !== 4) return showMessage('Please enter last 4 digits of sender number!', 'error');
+
+    // 🔄 Show Loader inside button
+    const originalBtnText = verifyBtn.innerHTML;
+    verifyBtn.disabled = true;
+    verifyBtn.innerHTML = `<div class="btn-spinner"></div> Verifying...`;
 
     try {
-        const formData = new FormData();
-        selectedFiles.forEach(item => formData.append('files', item.file));
+        // 1. Verify Payment First
+        // Note: Assuming verify-payment endpoint is at same base url but /verify-payment
+        const verifyUrl = CENTRAL_SERVER.replace('/upload', '') + '/verify-payment';
 
-        // Send Settings + Cost to Server
+        const verifyRes = await fetch(verifyUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                trx_id: trxId,
+                sender_num: senderNum,
+                amount: currentTotalCost
+            })
+        });
+
+        const verifyResult = await verifyRes.json();
+
+        if (!verifyRes.ok) {
+            verifyBtn.disabled = false;
+            verifyBtn.innerHTML = originalBtnText;
+
+            // ❌ UNDERPAYMENT Logic
+            if (verifyResult.error_type === 'underpayment') {
+                alert(verifyResult.message);
+                // Optional: location.reload();
+            } else {
+                showMessage(verifyResult.message, 'error');
+            }
+            return;
+        }
+
+        // ✅ OVERPAYMENT Warning Logic
+        if (verifyResult.warning) {
+            alert(verifyResult.message);
+        }
+
+        // 2. Proceed to Upload
+        verifyBtn.innerHTML = `<div class="btn-spinner"></div> Uploading...`;
+        loading.classList.add('show');
+
+        const formData = new FormData();
+        formData.append('userName', userNameInput.value.trim());
+        formData.append('studentId', studentIdInput.value.trim());
+        formData.append('location', printerLocation);
+        formData.append('trxId', trxId);
+        formData.append('senderNum', senderNum);
+        formData.append('totalCost', currentTotalCost);
+        selectedFiles.forEach(item => formData.append('files', item.file));
         const settings = selectedFiles.map(item => ({
+            fileName: item.file.name,
             range: item.range,
             copies: item.copies,
             color: item.color,
-            cost: item.calculatedCost || 0
+            cost: item.calculatedCost || 0,
+            pages: item.pageCount
         }));
         formData.append('fileSettings', JSON.stringify(settings));
-        formData.append('location', selectedLocation);
-        formData.append('gateway', gateway);
 
-        const res = await fetch(CENTRAL_SERVER, { method: 'POST', body: formData });
-        const result = await res.json();
+        const uploadRes = await fetch(CENTRAL_SERVER, { method: 'POST', body: formData });
+        const uploadResult = await uploadRes.json();
 
         loading.classList.remove('show');
-        if (res.ok) {
-            showMessage(`✅ Order Sent to ${selectedLocation}!`, 'success');
-            selectedFiles = []; updateUI(); paymentSection.classList.remove('show');
+        verifyBtn.disabled = false;
+        verifyBtn.innerHTML = originalBtnText;
+
+        if (uploadRes.ok) {
+            showMessage(`✅ Order Verified & Sent!`, 'success');
+            selectedFiles = [];
+            updateUI();
+            paymentSection.classList.remove('show');
+            uploadForm.reset();
         } else {
-            showMessage('❌ Failed: ' + (result.error || 'Server Error'), 'error');
+            showMessage('❌ Upload Failed: ' + (uploadResult.error || 'Server Error'), 'error');
         }
+
     } catch (err) {
+        verifyBtn.disabled = false;
+        verifyBtn.innerHTML = originalBtnText;
         loading.classList.remove('show');
         console.error(err);
         showMessage('❌ Server Connection Error!', 'error');
     }
-}
-
-// Payment Buttons
-document.getElementById('bkashBtn').onclick = () => processPayment('bKash');
-document.getElementById('nagadBtn').onclick = () => processPayment('Nagad');
-document.getElementById('stripeBtn').onclick = () => processPayment('Stripe');
+};
 
 function showMessage(t, type) {
     messageDiv.textContent = t;
