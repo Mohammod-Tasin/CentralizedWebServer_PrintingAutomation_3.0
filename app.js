@@ -19,12 +19,17 @@ const verifyBtn = document.getElementById('verifyBtn');
 const userNameInput = document.getElementById('userName');
 const studentIdInput = document.getElementById('studentId');
 const trxIdInput = document.getElementById('trxId');
-// 🔥 CHANGE: Sender Number Input Removed
 const printerLocation = document.getElementById('printerLocation').value;
 const collectLaterInput = document.getElementById('collectLater');
 
 let selectedFiles = [];
 let currentTotalCost = 0;
+
+// 🔥 WhatsApp Contact Message (Reusable)
+const supportMsg = `<br><div style="margin-top:6px; font-size:0.9rem; color:#ffd1d1;">
+                    যে কোনো সমস্যায় WhatsApp করুন:<br>
+                    <strong style="font-size:1rem; color:#fff;">01771080238</strong>
+                    </div>`;
 
 // Checkbox a click korle dam update hobe
 collectLaterInput.addEventListener('change', updateUI);
@@ -60,7 +65,7 @@ function updateUI() {
         const settingsDiv = document.createElement('div');
         settingsDiv.className = 'settings-row';
 
-        // 🔥 CHECK: File ta Image kina?
+        // Check: File ta Image kina?
         const isImage = item.file.name.match(/\.(jpg|jpeg|png|gif|bmp|webp)$/i);
 
         // Pages Input Logic
@@ -191,7 +196,6 @@ uploadForm.addEventListener('submit', (e) => {
     }
 
     trxIdInput.value = '';
-    // SenderNum Clear removed
 
     // NAGAD HIDE LOGIC
     const nagadWrapper = document.getElementById('nagadWrapper');
@@ -214,8 +218,6 @@ verifyBtn.onclick = async () => {
 
     if (!trxId) return showMessage('Please enter Transaction ID!', 'error');
 
-    // 🔥 CHANGE: Removed Sender Number Check
-
     const originalBtnText = verifyBtn.innerHTML;
     verifyBtn.disabled = true;
     verifyBtn.innerHTML = `<div class="btn-spinner"></div> Verifying...`;
@@ -228,7 +230,6 @@ verifyBtn.onclick = async () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 trx_id: trxId,
-                // 🔥 CHANGE: No sender_num sent
                 amount: currentTotalCost
             })
         });
@@ -239,10 +240,11 @@ verifyBtn.onclick = async () => {
             verifyBtn.disabled = false;
             verifyBtn.innerHTML = originalBtnText;
 
+            // 🔥 ERROR SCENARIO 1: Verification Failed
             if (verifyResult.error_type === 'underpayment') {
-                alert(verifyResult.message);
+                alert(verifyResult.message + "\n\nসমস্যা হলে যোগাযোগ করুন: 01771080238 (WhatsApp)");
             } else {
-                showMessage(verifyResult.message, 'error');
+                showMessage(verifyResult.message + supportMsg, 'error');
             }
             return;
         }
@@ -260,7 +262,6 @@ verifyBtn.onclick = async () => {
         formData.append('studentId', studentIdInput.value.trim());
         formData.append('location', printerLocation);
         formData.append('trxId', trxId);
-        // 🔥 CHANGE: No senderNum appended
         formData.append('totalCost', currentTotalCost);
         formData.append('collectLater', collectLaterInput.checked);
 
@@ -290,7 +291,8 @@ verifyBtn.onclick = async () => {
             paymentSection.classList.remove('show');
             uploadForm.reset();
         } else {
-            showMessage('❌ Upload Failed: ' + (uploadResult.error || 'Server Error'), 'error');
+            // 🔥 ERROR SCENARIO 2: Upload Failed
+            showMessage('❌ ফাইল আপলোড হয়নি!' + supportMsg, 'error');
         }
 
     } catch (err) {
@@ -298,12 +300,18 @@ verifyBtn.onclick = async () => {
         verifyBtn.innerHTML = originalBtnText;
         loading.classList.remove('show');
         console.error(err);
-        showMessage('❌ Server Connection Error!', 'error');
+
+        // 🔥 ERROR SCENARIO 3: Server Offline / Network Error
+        showMessage('❌ সার্ভার কানেকশন পাওয়া যাচ্ছে না!' + supportMsg, 'error');
     }
 };
 
+// 🔥 Updated to use innerHTML for bold text and line breaks
 function showMessage(t, type) {
-    messageDiv.textContent = t;
+    messageDiv.innerHTML = t;
     messageDiv.className = 'toast show ' + type;
-    setTimeout(()=>messageDiv.className='toast', 4000);
+
+    // Error হলে মেসেজটি ৮ সেকেন্ড থাকবে, যাতে নাম্বার দেখা যায়
+    let time = type === 'error' ? 8000 : 4000;
+    setTimeout(()=>messageDiv.className='toast', time);
 }
