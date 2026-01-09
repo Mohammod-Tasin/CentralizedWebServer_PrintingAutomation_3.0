@@ -19,13 +19,15 @@ const verifyBtn = document.getElementById('verifyBtn');
 const userNameInput = document.getElementById('userName');
 const studentIdInput = document.getElementById('studentId');
 const trxIdInput = document.getElementById('trxId');
-const senderNumInput = document.getElementById('senderNum');
+// 🔥 CHANGE: Sender Number Input Removed
 const printerLocation = document.getElementById('printerLocation').value;
-// 🔥 NEW INPUT
 const collectLaterInput = document.getElementById('collectLater');
 
 let selectedFiles = [];
 let currentTotalCost = 0;
+
+// Checkbox a click korle dam update hobe
+collectLaterInput.addEventListener('change', updateUI);
 
 // Handle File Selection
 fileInput.addEventListener('change', (e) => {
@@ -58,9 +60,15 @@ function updateUI() {
         const settingsDiv = document.createElement('div');
         settingsDiv.className = 'settings-row';
 
-        // Pages Input
+        // 🔥 CHECK: File ta Image kina?
+        const isImage = item.file.name.match(/\.(jpg|jpeg|png|gif|bmp|webp)$/i);
+
+        // Pages Input Logic
         let totalPagesInput = '';
-        if (item.file.name.toLowerCase().endsWith('.pdf')) {
+
+        if (isImage) {
+            totalPagesInput = '';
+        } else if (item.file.name.toLowerCase().endsWith('.pdf')) {
             totalPagesInput = `<div class="input-group"><label>Pages</label><input type="text" value="${item.pageCount}" disabled class="ctrl-input" style="background:#eee; width:50px;"></div>`;
         } else {
             totalPagesInput = `
@@ -73,14 +81,22 @@ function updateUI() {
             `;
         }
 
-        settingsDiv.innerHTML = `
-            ${totalPagesInput}
+        // Range Input Logic
+        let rangeInput = '';
+        if (!isImage) {
+            rangeInput = `
             <div class="input-group">
                 <label>Range</label>
                 <input type="text" placeholder="1-5" value="${item.range}" 
                        onchange="updateFileSetting(${index}, 'range', this.value)"
                        class="ctrl-input" style="width:70px;">
-            </div>
+            </div>`;
+        }
+
+        // HTML Generate
+        settingsDiv.innerHTML = `
+            ${totalPagesInput}
+            ${rangeInput}
             <div class="input-group">
                 <label>Copies</label>
                 <input type="number" min="1" value="${item.copies}" 
@@ -92,7 +108,7 @@ function updateUI() {
                 <select onchange="updateFileSetting(${index}, 'color', this.value)" 
                         class="ctrl-select" style="${item.color === 'color' ? 'background:#dcfce7;' : ''}">
                     <option value="bw" ${item.color === 'bw' ? 'selected' : ''}>B&W (2tk)</option>
-                    <option value="color" ${item.color === 'color' ? 'selected' : ''}>Color (3.5tk)</option>
+                    <option value="color" ${item.color === 'color' ? 'selected' : ''}>Color (3tk)</option>
                 </select>
             </div>
         `;
@@ -124,15 +140,20 @@ function updateUI() {
             estimatedPages = 1;
         }
 
-        const costPerSheet = item.color === 'bw' ? 2 : 3.5;
+        const costPerSheet = item.color === 'bw' ? 2 : 3;
         const fileCost = estimatedPages * item.copies * costPerSheet;
         item.calculatedCost = fileCost;
 
         grandTotalCost += fileCost;
     });
 
-    // CEIL COST
-    currentTotalCost = Math.ceil(grandTotalCost);
+    // Collect Later Extra Charge
+    if (collectLaterInput.checked && selectedFiles.length > 0) {
+        grandTotalCost += 1;
+    }
+
+    currentTotalCost = grandTotalCost;
+
     document.getElementById('totalCost').textContent = currentTotalCost;
     document.getElementById('payAmountDisplay').textContent = currentTotalCost;
 }
@@ -170,7 +191,7 @@ uploadForm.addEventListener('submit', (e) => {
     }
 
     trxIdInput.value = '';
-    senderNumInput.value = '';
+    // SenderNum Clear removed
 
     // NAGAD HIDE LOGIC
     const nagadWrapper = document.getElementById('nagadWrapper');
@@ -187,13 +208,13 @@ uploadForm.addEventListener('submit', (e) => {
     paymentSection.classList.add('show');
 });
 
-// 🔥 VERIFY & UPLOAD LOGIC
+// Verify & Upload Logic
 verifyBtn.onclick = async () => {
     const trxId = trxIdInput.value.trim();
-    const senderNum = senderNumInput.value.trim();
 
     if (!trxId) return showMessage('Please enter Transaction ID!', 'error');
-    if (senderNum.length !== 4) return showMessage('Please enter last 4 digits of sender number!', 'error');
+
+    // 🔥 CHANGE: Removed Sender Number Check
 
     const originalBtnText = verifyBtn.innerHTML;
     verifyBtn.disabled = true;
@@ -207,7 +228,7 @@ verifyBtn.onclick = async () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 trx_id: trxId,
-                sender_num: senderNum,
+                // 🔥 CHANGE: No sender_num sent
                 amount: currentTotalCost
             })
         });
@@ -230,7 +251,7 @@ verifyBtn.onclick = async () => {
             alert(verifyResult.message);
         }
 
-        // 2. Proceed to Upload
+        // Proceed to Upload
         verifyBtn.innerHTML = `<div class="btn-spinner"></div> Uploading...`;
         loading.classList.add('show');
 
@@ -239,9 +260,8 @@ verifyBtn.onclick = async () => {
         formData.append('studentId', studentIdInput.value.trim());
         formData.append('location', printerLocation);
         formData.append('trxId', trxId);
-        formData.append('senderNum', senderNum);
+        // 🔥 CHANGE: No senderNum appended
         formData.append('totalCost', currentTotalCost);
-        // 🔥 SEND COLLECT LATER FLAG
         formData.append('collectLater', collectLaterInput.checked);
 
         selectedFiles.forEach(item => formData.append('files', item.file));
@@ -265,6 +285,7 @@ verifyBtn.onclick = async () => {
         if (uploadRes.ok) {
             showMessage(`✅ Order Verified & Sent!`, 'success');
             selectedFiles = [];
+            collectLaterInput.checked = false; // Reset checkbox
             updateUI();
             paymentSection.classList.remove('show');
             uploadForm.reset();
